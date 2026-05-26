@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>RAG 问答系统</title>
+    <!-- 引入 Tailwind CSS 美化界面 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+    <div class="w-full max-w-2xl bg-white shadow-lg rounded-lg overflow-hidden p-6">
+        <h2 class="text-2xl font-bold mb-4 text-blue-600">智能问答助手</h2>
+
+        <!-- 对话显示区域 -->
+        <div id="chat-box" class="border rounded-lg p-4 h-96 overflow-y-auto bg-gray-50 mb-4 space-y-3 whitespace-pre-wrap">
+            <div class="text-gray-500 text-sm">你好！请问有什么可以帮您？</div>
+        </div>
+
+        <!-- 提问输入区域 -->
+        <div class="flex gap-2">
+            <input
+                type="text"
+                id="question-input"
+                placeholder="请输入您的问题..."
+                class="flex-grow border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onkeydown="if(event.key === 'Enter') sendQuestion()"
+            >
+            <button
+                onclick="sendQuestion()"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition"
+            >
+                发送
+            </button>
+        </div>
+    </div>
+
+    <!-- 核心交互 JS 逻辑 -->
+    <script>
+        // 获取 DOM 元素
+        const chatBox = document.getElementById('chat-box');
+        const questionInput = document.getElementById('question-input');
+
+        // 发送问题的核心函数
+        async function sendQuestion() {
+            const question = questionInput.value.trim();
+            if (!question) return; // 如果输入为空则不发送
+
+            // 1. 在聊天框显示用户的问题
+            appendMessage('user', question);
+            questionInput.value = ''; // 清空输入框
+
+            // 2. 准备发送给后端的数据
+            const formData = new FormData();
+            formData.append('question', question);
+
+            try {
+                // 3. 向后端 /api/ask 接口发起 POST 请求
+                const response = await fetch('/api/ask', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // 4. 在聊天框显示机器人的回答
+                if (data.answer) {
+                    appendMessage('bot', data.answer);
+                } else if (data.error) {
+                    appendMessage('bot', '❌ 发生错误: ' + data.error);
+                }
+            } catch (error) {
+                console.error('请求失败:', error);
+                appendMessage('bot', '❌ 网络请求失败，请检查控制台报错。');
+            }
+        }
+
+        // 辅助函数：向聊天框添加消息
+        function appendMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = sender === 'user'
+                ? 'text-right text-blue-600 font-medium'
+                : 'text-left text-gray-700';
+            messageDiv.textContent = (sender === 'user' ? '我: ' : 'AI: ') + text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight; // 自动滚动到底部
+        }
+    </script>
+</body>
+</html>
